@@ -8,8 +8,7 @@
  */
 class CommandInterpreter {
 public:
-    // TODO: Implement constructor and destructor to initialize any needed resources
-    CommandInterpreter();
+    CommandInterpreter(class Marquee* m, class Console* c);
     ~CommandInterpreter();
 
     // TODO: Implement the logic to parse the user input and route it to the correct action.
@@ -23,8 +22,8 @@ private:
     // TODO: Implement the exit command to gracefully terminate the console
     void exit();
     
-    // TODO: Add any necessary references or pointers to the Marquee or Console 
-    // to allow commands to control them.
+    class Marquee* marquee;
+    class Console* console;
 };
 
 #endif // COMMANDS_H
