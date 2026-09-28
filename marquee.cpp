@@ -127,7 +127,7 @@ void Marquee::renderAscii() {
     // Marquee text
     frame += "\033[2;1H|";
     frame.append(currentXPos, ' ');
-    frame += currentText;
+    frame += "\033[32m" + currentText + "\033[0m";
     int remainingSpaces = boxWidth - currentXPos - static_cast<int>(currentText.length());
     if (remainingSpaces > 0) {
         frame.append(remainingSpaces, ' ');
