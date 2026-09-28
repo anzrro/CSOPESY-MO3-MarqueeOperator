@@ -7,7 +7,7 @@ This document explains the functionality of the `console`, `commands`, and `main
 The system is composed of several components working together:
 1. **Console (`console.h` & `console.cpp`)**: Acts as the main application interface. It handles user input looping and displays the prompt.
 2. **CommandInterpreter (`commands.h` & `commands.cpp`)**: Parses and executes commands received from the Console.
-3. **Marquee (`marquee.h` & `marquee.cpp`)**: Handles the actual thread-based rendering of the marquee. (Note: Only stub implementations were added here to ensure the codebase links correctly, as per requirements).
+3. 3. **Marquee (`marquee.h` & `marquee.cpp`)**: Handles the multithreaded marquee animation. It maintains the displayed text, refresh interval, position, and direction while a background worker thread continuously renders the marquee independently of the main command interface.
 4. **Main (`main.cpp`)**: The entry point of the program that instantiates the Console and runs it.
 
 ## How It Works
