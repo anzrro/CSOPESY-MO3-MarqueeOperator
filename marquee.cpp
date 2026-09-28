@@ -1,41 +1,138 @@
 #include "marquee.h"
 #include <iostream>
+#include <chrono>
+#include <windows.h> // Standard library for Windows console features
 
-Marquee::Marquee() : speed(100), isRunning(false), text("Hello, World!") {
+// Moves the console cursor to (X, Y)
+static void setCursorPosition(int x, int y) {
+    COORD coord;
+    coord.X = static_cast<SHORT>(x);
+    coord.Y = static_cast<SHORT>(y);
+    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
 }
 
+// Gets the current cursor position so we can return to it
+static COORD getCursorPosition() {
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+    return csbi.dwCursorPosition;
+}
+
+Marquee::Marquee() {
+    // Default values
+    text = "CSOPESY";
+    speed = 150;           // 150 ms default speed
+    isRunning = false;     // Not running until user types 'start_marquee'
+    xPos = 0;              // Start at the left
+    direction = 1;         // Move right initially
+}
+
+
 Marquee::~Marquee() {
+    // Make sure the thread is stopped before the object is destroyed
     stop();
 }
 
 void Marquee::start() {
+    // Only starts if not already running
     if (!isRunning) {
         isRunning = true;
-        // In a real implementation, start the animation thread here
+        // Start animationLoop on a new background thread
+        animationThread = std::thread(&Marquee::animationLoop, this);
     }
 }
 
 void Marquee::stop() {
+    // Only stop if currently running
     if (isRunning) {
-        isRunning = false;
-        // In a real implementation, join the thread here
+        isRunning = false; // Tells the while loop in animationLoop() to stop
+        if (animationThread.joinable()) {
+            animationThread.join(); // Wait for the background thread to finish cleanly
+        }
     }
 }
 
 void Marquee::setText(const std::string& newText) {
+    // lock_guard automatically locks mtx here and unlocks it when the function ends
     std::lock_guard<std::mutex> lock(mtx);
     text = newText;
+    xPos = 0; // Reset position to left edge
 }
 
 void Marquee::setSpeed(int milliseconds) {
     std::lock_guard<std::mutex> lock(mtx);
-    speed = milliseconds;
+    // Don't allow speeds less than 1ms to prevent crashes
+    if (milliseconds < 1) {
+        speed = 1;
+    } else {
+        speed = milliseconds;
+    }
 }
 
 void Marquee::animationLoop() {
-    // Dummy implementation
+    // This loop runs in the background as long as isRunning is true
+    while (isRunning) {
+        renderAscii();
+
+        // Safely read the current speed
+        int currentSpeed;
+        {
+            std::lock_guard<std::mutex> lock(mtx);
+            currentSpeed = speed;
+        }
+
+        // Pause for 'currentSpeed' milliseconds before drawing the next frame
+        std::this_thread::sleep_for(std::chrono::milliseconds(currentSpeed));
+    }
 }
 
 void Marquee::renderAscii() {
-    // Dummy implementation
+    // Safely copy text
+    std::string currentText;
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        currentText = text;
+    }
+
+    // Calculate bounce logic
+    int maxPos = boxWidth - static_cast<int>(currentText.length()) - 2;
+    if (maxPos < 0) {
+        maxPos = 0;
+    }
+
+    xPos += direction;
+    if (xPos >= maxPos) {
+        xPos = maxPos;
+        direction = -1; // Hit right wall -> bounce left
+    } else if (xPos <= 0) {
+        xPos = 0;
+        direction = 1;  // Hit left wall -> bounce right
+    }
+
+    // Remember where the user's cursor currently is (where they are typing)
+    COORD savedPos = getCursorPosition();
+
+    // Move cursor to row 0, 1, and 2 at the top of the terminal
+    setCursorPosition(0, 0);
+    std::cout << "+";
+    for (int i = 0; i < boxWidth; ++i) std::cout << "-";
+    std::cout << "+";
+
+    setCursorPosition(0, 1);
+    std::cout << "|";
+    for (int i = 0; i < xPos; ++i) std::cout << " ";
+    std::cout << currentText;
+    for (int i = 0; i < (boxWidth - xPos - static_cast<int>(currentText.length())); ++i) {
+        std::cout << " ";
+    }
+    std::cout << "|";
+
+    setCursorPosition(0, 2);
+    std::cout << "+";
+    for (int i = 0; i < boxWidth; ++i) std::cout << "-";
+    std::cout << "+";
+
+    // Return the cursor back to the user's input line so typing is not interrupted
+    setCursorPosition(savedPos.X, savedPos.Y);
+    std::cout << std::flush;
 }
