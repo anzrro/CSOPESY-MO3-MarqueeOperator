@@ -1,9 +1,12 @@
 #include "marquee.h"
 #include <iostream>
 #include <chrono>
-#include <windows.h> // Standard library for Windows console features
+#include <windows.h> // Windows Console API for cursor manipulation
 
-// Moves the console cursor to (X, Y)
+/**
+ * Moves the console cursor to specific (X, Y) coordinates.
+ * Used to draw the marquee box at row 0 without scrolling the terminal.
+ */
 static void setCursorPosition(int x, int y) {
     COORD coord;
     coord.X = static_cast<SHORT>(x);
@@ -11,7 +14,10 @@ static void setCursorPosition(int x, int y) {
     SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
 }
 
-// Gets the current cursor position so we can return to it
+/**
+ * Retrieves the current cursor position.
+ * Preserves the user's typing position so drawing does not disrupt input.
+ */
 static COORD getCursorPosition() {
     CONSOLE_SCREEN_BUFFER_INFO csbi;
     GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
@@ -53,7 +59,7 @@ void Marquee::stop() {
 }
 
 void Marquee::setText(const std::string& newText) {
-    // lock_guard automatically locks mtx here and unlocks it when the function ends
+    // std::lock_guard locks the mutex upon creation and unlocks it on return
     std::lock_guard<std::mutex> lock(mtx);
     text = newText;
     xPos = 0; // Reset position to left edge
@@ -74,7 +80,7 @@ void Marquee::animationLoop() {
     while (isRunning) {
         renderAscii();
 
-        // Safely read the current speed
+        // Retrieve current speed safely using the mutex
         int currentSpeed;
         {
             std::lock_guard<std::mutex> lock(mtx);
@@ -100,6 +106,7 @@ void Marquee::renderAscii() {
         maxPos = 0;
     }
 
+    // Update horizontal coordinate and bounce when hitting walls
     xPos += direction;
     if (xPos >= maxPos) {
         xPos = maxPos;

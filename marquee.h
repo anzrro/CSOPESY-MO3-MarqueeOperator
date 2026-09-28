@@ -7,20 +7,34 @@
 #include <atomic>
 
 /**
- * Marquee handles the multithreaded rendering of an ASCII graphics animation.
+ * Handles the multithreaded rendering of an ASCII graphics marquee animation.
+ * The animation bounces text back and forth within a border box at the top of the terminal.
  */
 class Marquee {
 public:
+    // Initializes default text, refresh rate, and state variables
     Marquee();
+
+    // Ensures the animation thread is safely stopped and joined upon destruction
     ~Marquee();
 
+    // Spawns the background animation thread
     void start();
+
+    // Stops the background animation thread
     void stop();
+
+    // Updates the displayed text
     void setText(const std::string& newText);
+
+    // Updates the refresh interval in milliseconds
     void setSpeed(int milliseconds);
 
 private:
+    // Worker loop running on the background thread
     void animationLoop();
+
+    // Calculates coordinates and draws the ASCII border and text
     void renderAscii();
 
     // Variables for Multithreading

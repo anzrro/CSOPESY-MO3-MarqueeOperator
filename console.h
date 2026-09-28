@@ -6,22 +6,21 @@
 #include "marquee.h"
 
 /**
- * Console is the main entry point interface for the OS emulator shell.
+ * Main shell interface managing initialization, user prompts, and command routing.
  */
 class Console {
 public:
     Console();
-    
     ~Console();
-    
-    void stop();
 
-    // TODO: Implement the main loop that continuously prompts the user, 
-    // accepts input, and passes it to the CommandInterpreter.
+    // Starts the main shell read-eval-print loop
     void run();
 
+    // Halts the shell loop and stops running sub-processes
+    void stop();
+
 private:
-    // TODO: Implement a function to display the initial welcome message and the prompt (e.g., "Command> ")
+    // Prints banner, authors, and initial system information
     void displayPrompt();
 
     CommandInterpreter* cmdInterpreter;

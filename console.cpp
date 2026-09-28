@@ -14,7 +14,7 @@ Console::~Console() {
 }
 
 void Console::run() {
-    // Clear console screen on Windows
+    // Clear terminal screen
     system("cls");
 
     // Move cursor down to Row 4 so the marquee has room at Rows 0-2
@@ -28,7 +28,7 @@ void Console::run() {
     while (isRunning) {
         std::cout << "Command> ";
         if (!std::getline(std::cin, command)) {
-            break;
+            break; // Handle EOF or unexpected input termination
         }
         if (!command.empty()) {
             cmdInterpreter->executeCommand(command);

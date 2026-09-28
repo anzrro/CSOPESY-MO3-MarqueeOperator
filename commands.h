@@ -4,22 +4,21 @@
 #include <string>
 
 /**
- * CommandInterpreter handles the parsing and execution of user commands.
+ * Parses user input commands and directs them to the Console or Marquee modules.
  */
 class CommandInterpreter {
 public:
     CommandInterpreter(class Marquee* m, class Console* c);
     ~CommandInterpreter();
 
-    // TODO: Implement the logic to parse the user input and route it to the correct action.
-    // Acceptable commands: "help", "start_marquee", "stop_marquee", "set_text", "set_speed", "exit"
+    // Parses input string and triggers the appropriate action
     void executeCommand(const std::string& command);
 
 private:
-    // TODO: Implement the help command to display available commands and their descriptions
+    // Displays all supported shell commands and usage
     void help();
 
-    // TODO: Implement the exit command to gracefully terminate the console
+    // Requests console shutdown
     void exit();
     
     class Marquee* marquee;
