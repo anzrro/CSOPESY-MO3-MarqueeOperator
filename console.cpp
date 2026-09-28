@@ -2,11 +2,25 @@
 #include <iostream>
 #include <windows.h>
 #include <string>
+#include <fstream>
 
 Console::Console() {
     marqueeDisplay = new Marquee();
     cmdInterpreter = new CommandInterpreter(marqueeDisplay, this);
     isRunning = false;
+
+    std::ifstream configFile("config.txt");
+    if (configFile.is_open()) {
+        std::string speedStr, textStr;
+        if (std::getline(configFile, speedStr)) {
+            try {
+                marqueeDisplay->setSpeed(std::stoi(speedStr));
+            } catch (...) {}
+        }
+        if (std::getline(configFile, textStr) && !textStr.empty()) {
+            marqueeDisplay->setText(textStr);
+        }
+    }
 }
 
 Console::~Console() {
