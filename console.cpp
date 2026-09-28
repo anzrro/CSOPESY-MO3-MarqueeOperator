@@ -49,6 +49,6 @@ void Console::displayPrompt() {
     std::cout << "Romero, Aaron Zander\n"; 
     std::cout << "Tiangson, Ezekiel Martinez\n"; 
     std::cout << "Vito, Luis Andre\n"; 
-    std::cout << "Laus, Rance\n\n"; 
-    std::cout << "Version date: Sept 18, 2026\n\n";
+    std::cout << "Laus, Rance Lenard\n\n"; 
+    std::cout << "Version date: Sept 28, 2026\n\n";
 }
