@@ -1,6 +1,7 @@
 #include "console.h"
 #include <iostream>
 #include <windows.h>
+#include <string>
 
 Console::Console() {
     marqueeDisplay = new Marquee();
@@ -14,19 +15,32 @@ Console::~Console() {
 }
 
 void Console::run() {
-    // Clear terminal screen
-    system("cls");
+    // Enable ANSI escape sequences
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD dwMode = 0;
+    if (GetConsoleMode(hOut, &dwMode)) {
+        dwMode |= 0x0004; // ENABLE_VIRTUAL_TERMINAL_PROCESSING
+        SetConsoleMode(hOut, dwMode);
+    }
 
-    // Move cursor down to Row 4 so the marquee has room at Rows 0-2
-    COORD coord = { 0, 4 };
-    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    GetConsoleScreenBufferInfo(hOut, &csbi);
+    int height = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+    if (height < 10) height = 24; // fallback
+
+    // Clear terminal screen and set scroll to be from line 5 and below
+    std::cout << "\033[2J";
+    std::cout << "\033[5;" << height << "r";
+
+    // Move cursor to the bottom line
+    std::cout << "\033[" << height << ";1H";
 
     displayPrompt();
     isRunning = true;
 
     std::string command;
     while (isRunning) {
-        std::cout << "Command> ";
+        std::cout << "Command> \033[K";
         if (!std::getline(std::cin, command)) {
             break; // Handle EOF or unexpected input termination
         }
@@ -34,6 +48,9 @@ void Console::run() {
             cmdInterpreter->executeCommand(command);
         }
     }
+
+    // Reset scrolling region and clear screen on exit
+    std::cout << "\033[r\033[2J\033[H";
 }
 
 void Console::stop() {

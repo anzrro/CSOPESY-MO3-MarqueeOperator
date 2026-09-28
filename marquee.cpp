@@ -1,28 +1,7 @@
 #include "marquee.h"
 #include <iostream>
 #include <chrono>
-#include <windows.h> // Windows Console API for cursor manipulation
-
-/**
- * Moves the console cursor to specific (X, Y) coordinates.
- * Used to draw the marquee box at row 0 without scrolling the terminal.
- */
-static void setCursorPosition(int x, int y) {
-    COORD coord;
-    coord.X = static_cast<SHORT>(x);
-    coord.Y = static_cast<SHORT>(y);
-    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
-}
-
-/**
- * Retrieves the current cursor position.
- * Preserves the user's typing position so drawing does not disrupt input.
- */
-static COORD getCursorPosition() {
-    CONSOLE_SCREEN_BUFFER_INFO csbi;
-    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
-    return csbi.dwCursorPosition;
-}
+#include <string>
 
 Marquee::Marquee() {
     // Default values
@@ -84,15 +63,24 @@ void Marquee::animationLoop() {
     while (isRunning) {
         renderAscii();
 
-        // Retrieve current speed safely using the mutex
-        int currentSpeed;
-        {
-            std::lock_guard<std::mutex> lock(mtx);
-            currentSpeed = speed;
+        auto start_time = std::chrono::steady_clock::now();
+        while (isRunning) {
+            auto now = std::chrono::steady_clock::now();
+            auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time).count();
+            
+            int currentSpeed;
+            {
+                std::lock_guard<std::mutex> lock(mtx);
+                currentSpeed = speed;
+            }
+            
+            if (elapsed >= currentSpeed) {
+                break;
+            }
+            
+            // Sleep in small chunks for cleaner interruptions and faster updates
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
-
-        // Pause for 'currentSpeed' milliseconds before drawing the next frame
-        std::this_thread::sleep_for(std::chrono::milliseconds(currentSpeed));
     }
 }
 
@@ -128,49 +116,32 @@ void Marquee::renderAscii() {
         currentXPos = xPos;
     }
 
-    // Remember where the user is currently typing
-    COORD savedPos = getCursorPosition();
-
+    // Build frame buffer to prevent screen tearing
+    std::string frame = "\033[s\033[?25l"; // Save cursor, hide cursor
+    
     // Top border
-    setCursorPosition(0, 0);
-    std::cout << "+";
-    for (int i = 0; i < boxWidth; ++i) {
-        std::cout << "-";
-    }
-    std::cout << "+";
-
+    frame += "\033[1;1H+";
+    frame.append(boxWidth, '-');
+    frame += "+\033[K";
+    
     // Marquee text
-    setCursorPosition(0, 1);
-    std::cout << "|";
-
-    for (int i = 0; i < currentXPos; ++i) {
-        std::cout << " ";
+    frame += "\033[2;1H|";
+    frame.append(currentXPos, ' ');
+    frame += currentText;
+    int remainingSpaces = boxWidth - currentXPos - static_cast<int>(currentText.length());
+    if (remainingSpaces > 0) {
+        frame.append(remainingSpaces, ' ');
     }
-
-    std::cout << currentText;
-
-    int remainingSpaces =
-        boxWidth -
-        currentXPos -
-        static_cast<int>(currentText.length());
-
-    for (int i = 0; i < remainingSpaces; ++i) {
-        std::cout << " ";
-    }
-
-    std::cout << "|";
-
+    frame += "|\033[K";
+    
     // Bottom border
-    setCursorPosition(0, 2);
-    std::cout << "+";
-
-    for (int i = 0; i < boxWidth; ++i) {
-        std::cout << "-";
-    }
-
-    std::cout << "+";
-
-    // Restore user's cursor position
-    setCursorPosition(savedPos.X, savedPos.Y);
-    std::cout << std::flush;
+    frame += "\033[3;1H+";
+    frame.append(boxWidth, '-');
+    frame += "+\033[K";
+    
+    // Restore cursor and show cursor
+    frame += "\033[u\033[?25h";
+    
+    // Output everything atomically to avoid tearing
+    std::cout << frame << std::flush;
 }
