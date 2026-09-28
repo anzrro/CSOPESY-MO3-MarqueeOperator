@@ -30,6 +30,9 @@ public:
     // Updates the refresh interval in milliseconds
     void setSpeed(int milliseconds);
 
+    // Returns true if the marquee animation is currently running
+    bool isActive() const;
+
 private:
     // Worker loop running on the background thread
     void animationLoop();

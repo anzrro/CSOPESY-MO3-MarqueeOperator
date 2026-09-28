@@ -75,6 +75,10 @@ void Marquee::setSpeed(int milliseconds) {
     }
 }
 
+bool Marquee::isActive() const {
+    return isRunning.load();
+}
+
 void Marquee::animationLoop() {
     // This loop runs in the background as long as isRunning is true
     while (isRunning) {
@@ -93,53 +97,80 @@ void Marquee::animationLoop() {
 }
 
 void Marquee::renderAscii() {
-    // Safely copy text
     std::string currentText;
+    int currentXPos;
+
+    // Protect shared marquee state
     {
         std::lock_guard<std::mutex> lock(mtx);
+
         currentText = text;
+
+        // Calculate maximum valid position
+        int maxPos = boxWidth - static_cast<int>(currentText.length());
+
+        if (maxPos < 0) {
+            maxPos = 0;
+        }
+
+        // Update horizontal position
+        xPos += direction;
+
+        if (xPos >= maxPos) {
+            xPos = maxPos;
+            direction = -1;
+        }
+        else if (xPos <= 0) {
+            xPos = 0;
+            direction = 1;
+        }
+
+        currentXPos = xPos;
     }
 
-    // Calculate bounce logic
-    int maxPos = boxWidth - static_cast<int>(currentText.length()) - 2;
-    if (maxPos < 0) {
-        maxPos = 0;
-    }
-
-    // Update horizontal coordinate and bounce when hitting walls
-    xPos += direction;
-    if (xPos >= maxPos) {
-        xPos = maxPos;
-        direction = -1; // Hit right wall -> bounce left
-    } else if (xPos <= 0) {
-        xPos = 0;
-        direction = 1;  // Hit left wall -> bounce right
-    }
-
-    // Remember where the user's cursor currently is (where they are typing)
+    // Remember where the user is currently typing
     COORD savedPos = getCursorPosition();
 
-    // Move cursor to row 0, 1, and 2 at the top of the terminal
+    // Top border
     setCursorPosition(0, 0);
     std::cout << "+";
-    for (int i = 0; i < boxWidth; ++i) std::cout << "-";
+    for (int i = 0; i < boxWidth; ++i) {
+        std::cout << "-";
+    }
     std::cout << "+";
 
+    // Marquee text
     setCursorPosition(0, 1);
     std::cout << "|";
-    for (int i = 0; i < xPos; ++i) std::cout << " ";
-    std::cout << currentText;
-    for (int i = 0; i < (boxWidth - xPos - static_cast<int>(currentText.length())); ++i) {
+
+    for (int i = 0; i < currentXPos; ++i) {
         std::cout << " ";
     }
+
+    std::cout << currentText;
+
+    int remainingSpaces =
+        boxWidth -
+        currentXPos -
+        static_cast<int>(currentText.length());
+
+    for (int i = 0; i < remainingSpaces; ++i) {
+        std::cout << " ";
+    }
+
     std::cout << "|";
 
+    // Bottom border
     setCursorPosition(0, 2);
     std::cout << "+";
-    for (int i = 0; i < boxWidth; ++i) std::cout << "-";
+
+    for (int i = 0; i < boxWidth; ++i) {
+        std::cout << "-";
+    }
+
     std::cout << "+";
 
-    // Return the cursor back to the user's input line so typing is not interrupted
+    // Restore user's cursor position
     setCursorPosition(savedPos.X, savedPos.Y);
     std::cout << std::flush;
 }
